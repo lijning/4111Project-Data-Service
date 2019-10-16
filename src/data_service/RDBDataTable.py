@@ -1,5 +1,4 @@
 
-
 #########################################################
 #
 #
@@ -69,6 +68,8 @@ class RDBDataTable():
         # You can use the default.
         if connect_info is None:
             self._connect_info = RDBDataTable._default_connect_info
+        else:
+            self._connect_info = connect_info
 
         # Create a connection to use inside this object. In general, this is not the right approach.
         # There would be a connection pool shared across many classes and applications.
@@ -87,7 +88,6 @@ class RDBDataTable():
         self._table_name = table_name
         self._full_table_name = db_name + "." + table_name
 
-        self._connect_info = connect_info
         self._row_count = None
         self._key_columns = None
         self._sample_rows = None
@@ -125,17 +125,26 @@ class RDBDataTable():
 
         :return: Returns the count of the number of rows in the table.
         """
-
-        # -- TO IMPLEMENT --
+        sql = "select count(*) as cnt from " + self._full_table_name
+        try:
+            res, data = dbutils.run_q(sql, conn=self._cnx, commit=True, fetch=True)
+        except Exception as e:
+            print("Exception e = ", e)
+            raise e
+        return data[0].get("cnt", 0)
 
     def get_primary_key_columns(self):
         """
 
         :return: A list of the primary key columns ordered by their position in the key.
         """
-
-        # -- TO IMPLEMENT --
-
+        sql = "show keys from {} WHERE Key_name = 'PRIMARY'".format(self._full_table_name)
+        try:
+            res, data = dbutils.run_q(sql, conn=self._cnx)
+        except Exception as e:
+            print("Exception e = ", e)
+            raise e
+        return [row.get("Column_name", None) for row in list(data)]
         # Hint. Google "get primary key columns mysql"
         # Hint. THE ORDER OF THE COLUMNS IN THE KEY DEFINITION MATTERS.
 
@@ -315,4 +324,3 @@ class RDBDataTable():
         # Aly and Ara told me to get rid of this requirement or they would be unhappy.
         #
         pass
-

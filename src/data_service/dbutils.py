@@ -123,7 +123,7 @@ def create_select(table_name, template, fields=None, order_by=None, limit=None, 
         if fields is None:
             field_list = " * "
         else:
-            field_list = " " + ",".join(fields) + " "
+            field_list = " `" + "`,".join(fields) + " "
     else:
         field_list = None
 

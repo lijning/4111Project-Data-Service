@@ -6,6 +6,16 @@ import src.data_service.RDBDataTable as RDBDataTable
 # It is inefficient to create an instance of RDBDataTable for each request.  This is a cache of created
 # instances.
 _db_tables = {}
+_CONNECT_INFO = {
+    'host': 'localhost',
+    'user': 'someone',
+    'password': 'link',
+    'db': 'lahman2019clean',
+    'port': 3306,
+    'charset': 'utf8mb4',
+    'cursorclass': pymysql.cursors.DictCursor
+}
+
 
 def get_rdb_table(table_name, db_name, key_columns=None, connect_info=None):
     """
@@ -27,6 +37,9 @@ def get_rdb_table(table_name, db_name, key_columns=None, connect_info=None):
 
     # We have not yet accessed this table.
     if result is None:
+        if connect_info is None:
+            global _CONNECT_INFO
+            connect_info = _CONNECT_INFO
 
         # Make an RDBDataTable for this database table.
         result = RDBDataTable.RDBDataTable(table_name, db_name, key_columns, connect_info)
@@ -46,21 +59,23 @@ def get_rdb_table(table_name, db_name, key_columns=None, connect_info=None):
 # -- TO IMPLEMENT --
 #########################################
 
-def get_databases():
+def get_databases(connect_info=None):
     """
 
     :return: A list of databases/schema at this endpoint.
     """
-
-    # -- TO IMPLEMENT --
-    pass
-
-
-
-
-
-
-
-
-
-
+    if connect_info is None:
+        global _CONNECT_INFO
+        cnx = dbutils.get_connection(_CONNECT_INFO)
+    else:
+        cnx = pymysql.connect(
+            host=connect_info['host'],
+            user=connect_info['user'],
+            password=connect_info['password'],
+            db=connect_info['db'],
+            charset='utf8mb4',
+            cursorclass=pymysql.cursors.DictCursor
+        )
+    sql = "show databases;"
+    res, data = dbutils.run_q(sql, conn=cnx)
+    return [row["Database"] for row in data]
