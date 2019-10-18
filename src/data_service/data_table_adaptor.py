@@ -17,7 +17,7 @@ _CONNECT_INFO = {
 }
 
 
-def get_rdb_table(table_name, db_name, key_columns=None, connect_info=None):
+def get_rdb_table(table_name: str, db_name: str, key_columns=None, connect_info=None) -> RDBDataTable:
     """
 
     :param table_name: Name of the database table.
@@ -79,3 +79,28 @@ def get_databases(connect_info=None):
     sql = "show databases;"
     res, data = dbutils.run_q(sql, conn=cnx)
     return [row["Database"] for row in data]
+
+
+def get_tables(database, connect_info=None):
+    """
+
+    :param database: str, name of a database.
+    :param connect_info:
+    :return: A list of tables in that database.
+    """
+    if connect_info is None:
+        global _CONNECT_INFO
+        cnx = dbutils.get_connection(_CONNECT_INFO)
+    else:
+        cnx = pymysql.connect(
+            host=connect_info['host'],
+            user=connect_info['user'],
+            password=connect_info['password'],
+            db=connect_info['db'],
+            charset='utf8mb4',
+            cursorclass=pymysql.cursors.DictCursor
+        )
+    sql = "show tables in `{}`;".format(database)
+    col_name = "Tables_in_{}".format(database)
+    res, data = dbutils.run_q(sql, conn=cnx)
+    return [row[col_name] for row in data]

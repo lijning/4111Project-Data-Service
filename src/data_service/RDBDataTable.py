@@ -131,7 +131,8 @@ class RDBDataTable():
         except Exception as e:
             print("Exception e = ", e)
             raise e
-        return data[0].get("cnt", 0)
+        self._row_count = data[0].get("cnt", 0)
+        return self._row_count
 
     def get_primary_key_columns(self):
         """
@@ -144,7 +145,8 @@ class RDBDataTable():
         except Exception as e:
             print("Exception e = ", e)
             raise e
-        return [row.get("Column_name", None) for row in list(data)]
+        self._key_columns = [row.get("Column_name", None) for row in list(data)]
+        return self._key_columns
         # Hint. Google "get primary key columns mysql"
         # Hint. THE ORDER OF THE COLUMNS IN THE KEY DEFINITION MATTERS.
 
@@ -181,7 +183,7 @@ class RDBDataTable():
     # THE METHODS BELOW ARE BASICALLY THE SOLUTION TO THE RDB PART OF HW1
     #
     #
-    def find_by_primary_key(self, key_fields, field_list=None):
+    def find_by_primary_key(self, key_fields: list, field_list=None):
         """
 
         :param key_fields: The values for the key_columns, in order, to use to find a record.

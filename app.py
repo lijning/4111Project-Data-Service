@@ -29,13 +29,7 @@ _port = 5002
 _api_base = "/api"
 
 application = Flask(__name__)
-CONNECT_INFO = {
-    'host': 'localhost',
-    'user': 'someone',
-    'password': 'link',
-    'db': 'lahman2019clean',
-    'port': 3306
-}
+
 
 def handle_args(args):
     """
@@ -61,6 +55,8 @@ def handle_args(args):
 # 3. Return extracted information.
 #
 def log_and_extract_input(method, path_params=None):
+    req = request
+
     path = request.path
     args = dict(request.args)
     data = None
@@ -120,6 +116,16 @@ def log_response(path, rsp):
 
 def get_field_list(inputs):
     return inputs.get('fields', None)
+# def get_field_list(inputs):
+#     params = inputs.get('query_params', None)
+#     if params is None:
+#         return None
+#     else:
+#         fields = params.get("fields", None)
+#         if fields is None:
+#             return None
+#         else:
+#             return fields.split(',')
 
 
 def generate_error(status_code, ex=None, msg=None):
@@ -191,8 +197,10 @@ def dbs():
     :return: A JSON object/list containing the databases at this endpoint.
     """
     ls_dbs = dta.get_databases()
+    data = {"databases": ls_dbs}
     rsp = Response(json.dumps(ls_dbs), status=200, content_type="application/json")
     return rsp
+
 
 @application.route("/api/databases/<dbname>", methods=["GET"])
 def tbls(dbname):
@@ -203,15 +211,14 @@ def tbls(dbname):
     """
 
     inputs = log_and_extract_input(tbls, None)
-
-    # Your code  goes here.
-
-    # Hint: Implement the function in data_table_adaptor
-    #
+    ls_tbls = dta.get_tables(dbname)
+    data = {"tables": ls_tbls, "dbname": dbname}
+    rsp = Response(json.dumps(ls_tbls), status=200, content_type="application/json")
+    return rsp
 
 
 @application.route('/api/<dbname>/<resource>/<primary_key>', methods=['GET', 'PUT', 'DELETE'])
-def resource_by_id(dbname, resource, primary_key):
+def resource_by_id(dbname, resource, primary_key: str):
     """
 
     :param dbname: Schema/database name.
@@ -226,32 +233,38 @@ def resource_by_id(dbname, resource, primary_key):
         # Parse the incoming request into an application specific format.
         context = log_and_extract_input(resource_by_id, (dbname, resource, primary_key))
 
-        #
-        # SOME CODE GOES HERE
-        #
-        # -- TO IMPLEMENT --
+        tbl = dta.get_rdb_table(table_name=resource, db_name=dbname)
+        ls_pks = primary_key.split("_")
+        field_list = get_field_list(context)
 
         if request.method == 'GET':
 
-            #
-            # SOME CODE GOES HERE
-            #
-            # -- TO IMPLEMENT --
-            pass
+            result = tbl.find_by_primary_key(ls_pks, field_list=field_list)
+            if result is None:
+                data = []
+                status = 404
+            else:
+                data = result
+                status = 200
+            content = {"data": data, "dbname": dbname}
+            resp = Response(json.dumps(content), status=status, content_type="application/json")
+            return resp
 
         elif request.method == 'DELETE':
-            #
-            # SOME CODE GOES HERE
-            #
-            # -- TO IMPLEMENT --
-            pass
+
+            result = tbl.delete_by_key(ls_pks)
+            content = {'result': result}
+            resp = Response(json.dumps(content), status=200, content_type="application/json")
+            return resp
 
         elif request.method == 'PUT':
-            #
-            # SOME CODE GOES HERE
-            #
-            # -- TO IMPLEMENT --
-            pass
+
+            kvp_to_put = context.get("body", None)
+            if kvp_to_put is None:
+                return result, 400, {'Content-Type': 'text/plain; charset=utf-8'}
+            result = tbl.update_by_key(ls_pks, kvp_to_put)
+            content = {'result': result}
+            return Response(json.dumps(content), status=200, content_type="application/json")
 
     except Exception as e:
         print(e)
@@ -264,29 +277,33 @@ def get_resource(dbname, resource_name):
 
     try:
         context = log_and_extract_input(get_resource, (dbname, resource_name))
-
-        #
-        # SOME CODE GOES HERE
-        #
-        # -- TO IMPLEMENT --
+        tbl = dta.get_rdb_table(table_name=resource_name, db_name=dbname)
 
         if request.method == 'GET':
-            #
-            # SOME CODE GOES HERE
-            #
-            # -- TO IMPLEMENT --
-            pass
+            template = context.get("query_params", None)
+            fields = get_field_list(context)
+            data = tbl.find_by_template(template=template, field_list=fields)
+            content = {"data": data}
+            return Response(json.dumps(content), status=200, content_type="application/json")
 
         elif request.method == 'POST':
-            #
-            # SOME CODE GOES HERE
-            #
-            # -- TO IMPLEMENT --
-            pass
+            kvp_to_put = context.get("body", None)
+            if kvp_to_put is None:
+                return result, 400, {'Content-Type': 'text/plain; charset=utf-8'}
+            result = tbl.insert(kvp_to_put)
+            if result == 1:
+                content = {"result": result, "msg": "Entry successfully inserted."}
+                return Response(json.dumps(content), status=201,
+                                content_type="application/json")
+            else:
+                content = {"result": result, "msg": "Entry insertion failed."}
+                return Response(json.dumps(content), status=400,
+                                content_type="application/json")
         else:
             result = "Invalid request."
             return result, 400, {'Content-Type': 'text/plain; charset=utf-8'}
-    except Exception as e:
+    # except Exception as e:
+    except TypeError as e:
         print("Exception e = ", e)
         return handle_error(e, result)
 

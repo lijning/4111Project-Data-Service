@@ -1,6 +1,8 @@
 import pymysql
 import logging
+
 logger = logging.getLogger()
+
 
 #########################################
 #
@@ -76,7 +78,7 @@ def run_q(sql, args=None, fetch=True, cur=None, conn=None, commit=True):
             conn.commit()
 
     except Exception as e:
-        raise(e)
+        raise (e)
 
     return (res, data)
 
@@ -94,7 +96,7 @@ def template_to_where_clause(template):
         args = []
         terms = []
 
-        for k,v in template.items():
+        for k, v in template.items():
             terms.append(" " + k + "=%s ")
             args.append(v)
 
@@ -123,23 +125,21 @@ def create_select(table_name, template, fields=None, order_by=None, limit=None, 
         if fields is None:
             field_list = " * "
         else:
-            field_list = " `" + "`,".join(fields) + " "
+            field_list = " `" + "`, `".join(fields) + "` "
     else:
         field_list = None
-
 
     w_clause, args = template_to_where_clause(template)
 
     if is_select:
-        sql = "select " + field_list + " from " +  table_name + " " + w_clause
+        sql = "select " + field_list + " from " + table_name + " " + w_clause
     else:
         sql = "delete from " + table_name + " " + w_clause
 
-    return (sql, args)
+    return sql, args
 
 
 def create_insert(table_name, new_row):
-
     sql = "insert into " + table_name + " "
 
     cols = list(new_row.keys())
@@ -148,7 +148,7 @@ def create_insert(table_name, new_row):
 
     args = list(new_row.values())
 
-    s_stuff = ["%s"]*len(args)
+    s_stuff = ["%s"] * len(args)
     s_clause = ",".join(s_stuff)
     v_clause = " values(" + s_clause + ")"
 
@@ -158,19 +158,17 @@ def create_insert(table_name, new_row):
 
 
 def create_update(table_name, template, changed_cols):
-
     sql = "update " + table_name + " "
 
     set_terms = []
     args = []
 
-    for k,v in changed_cols.items():
+    for k, v in changed_cols.items():
         args.append(v)
         set_terms.append(k + "=%s")
 
     set_terms = ",".join(set_terms)
     set_clause = " set " + set_terms
-
 
     w_clause, args2 = template_to_where_clause(template)
 
@@ -178,8 +176,3 @@ def create_update(table_name, template, changed_cols):
     args.extend(args2)
 
     return sql, args
-
-
-
-
-
