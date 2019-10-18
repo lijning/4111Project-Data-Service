@@ -97,6 +97,10 @@ def log_and_extract_input(method, path_params=None):
         del args['fields']
         inputs['fields'] = fields
 
+    if args:
+        inputs["offset"] = args.pop("offset", None)
+        inputs["limit"] = args.pop("limit", None)
+
     log_message += " received: \n" + json.dumps(inputs, indent=2)
     logger.debug(log_message)
 
@@ -116,6 +120,8 @@ def log_response(path, rsp):
 
 def get_field_list(inputs):
     return inputs.get('fields', None)
+
+
 # def get_field_list(inputs):
 #     params = inputs.get('query_params', None)
 #     if params is None:
@@ -126,6 +132,38 @@ def get_field_list(inputs):
 #             return None
 #         else:
 #             return fields.split(',')
+
+def format_links(url: str, limit: int, offset: int):
+    limit = int(limit)
+    offset = int(offset)
+    if '&limit=' not in url:
+        url = url + '&limit={}'.format(limit)
+    if '&offset=' not in url:
+        url = url + '&offset={}'.format(offset)
+    if offset == 0:
+        return [
+            {"rel": "current",
+             "href": url},
+            {"rel": "next",
+             "href": url.replace("offset={}".format(offset),
+                                 "offset={}".format(offset + limit))}
+        ]
+    if offset - limit < 0:
+        previous = {"rel": "previous",
+                    "href": url.replace("offset={}".format(offset),
+                                        "offset={}".format(0))}
+    else:
+        previous = {"rel": "previous",
+                    "href": url.replace("offset={}".format(offset),
+                                        "offset={}".format(offset - limit))}
+    return [
+        {"rel": "current",
+         "href": url},
+        {"rel": "next",
+         "href": url.replace("offset={}".format(offset),
+                             "offset={}".format(offset + limit))},
+        previous
+    ]
 
 
 def generate_error(status_code, ex=None, msg=None):
@@ -282,9 +320,18 @@ def get_resource(dbname, resource_name):
         if request.method == 'GET':
             template = context.get("query_params", None)
             fields = get_field_list(context)
-            data = tbl.find_by_template(template=template, field_list=fields)
-            content = {"data": data}
-            return Response(json.dumps(content), status=200, content_type="application/json")
+            limit = context.get("limit", 5)
+            offset = context.get("offset", 0)
+            if limit is None or offset is None:
+                limit = 5
+                offset = 0
+            data = tbl.find_by_template(template=template, field_list=fields,
+                                        offset=int(offset), limit=int(limit))
+            original_url = context.get("url", None)
+            content = {"data": data,
+                       "links": format_links(original_url, int(limit), int(offset))}
+            return Response(json.dumps(content), status=200,
+                            content_type="application/json")
 
         elif request.method == 'POST':
             kvp_to_put = context.get("body", None)

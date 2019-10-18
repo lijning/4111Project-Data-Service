@@ -224,7 +224,9 @@ class RDBDataTable():
         result = None
 
         try:
-            sql, args = dbutils.create_select(self._full_table_name, template=template, fields=field_list)
+            sql, args = dbutils.create_select(self._full_table_name, template=template,
+                                              fields=field_list,
+                                              limit=limit, offset=offset)
             res, data = dbutils.run_q(sql=sql, args=args, conn=self._cnx, commit=True, fetch=True)
         except Exception as e:
             print("Exception e = ", e)

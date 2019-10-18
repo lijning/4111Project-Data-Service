@@ -112,6 +112,7 @@ def create_select(table_name, template, fields=None, order_by=None, limit=None, 
     """
     Produce a select statement: sql string and args.
 
+    :param is_select:
     :param table_name: Table name: May be fully qualified dbname.tablename or just tablename.
     :param fields: Columns to select (an array of column name)
     :param template: One of Don Ferguson's weird JSON/python dictionary templates.
@@ -133,6 +134,12 @@ def create_select(table_name, template, fields=None, order_by=None, limit=None, 
 
     if is_select:
         sql = "select " + field_list + " from " + table_name + " " + w_clause
+        if limit:
+            sql = sql + " limit {} ".format(limit)
+            if offset:
+                if offset < 0:
+                    offset = 0
+                sql = sql + " offset {} ".format(offset)
     else:
         sql = "delete from " + table_name + " " + w_clause
 
